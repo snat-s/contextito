@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="utf-8">
+        <title>contextito game</title>
+        <meta name="author" content="Santiago Pedroza">
+        <meta name="description" content="contexto but simpler">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body,
+            h1,
+            p,
+            input,
+            button,
+            ol {
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                background-color: #f5f5f5;
+                font-family: Arial, sans-serif;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
+
+            h1 {
+                font-size: 36px;
+                margin-bottom: 20px;
+            }
+
+            p {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+            input,
+            button {
+                padding: 10px;
+                font-size: 16px;
+                border: none;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
+
+            button {
+                background-color: #007bff;
+                color: white;
+                cursor: pointer;
+            }
+
+            ol {
+                list-style: none;
+                padding-left: 0;
+            }
+
+            li {
+                font-size: 16px;
+                margin-bottom: 5px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>contextito</h1>
+        <p>A
+            <a href="https://contexto.me">context.me</a>
+            clone for educational purposes</p>
+        <p>The rules are simple, if you guess the correct word, you finish the game. Depending on how close to the original word you are, I will tell you. Have fun :)</p>
+        <p>A new problem every time you re-run the game.</p>
+        <input id="answerInput">
+        <button onclick="checkAnswer()">Submit answer</button>
+        <p id="resultMessage"></p>
+        <ol id="rankedList"></ol>
+        <script>
+            let validAnswers = new Set();
+            let rankedAnswers = new Map();
+            let correctAnswer = "";
+            const inputBox = document.getElementById("answerInput");
+            console.log("inputBox", inputBox);
+            function fetchData() {
+                fetch('/similarities').then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                }).then(data => {
+                    const [winner, list_of_comparisons] = data;
+                    correctAnswer = winner[0];
+                    for (let i = 0; i < list_of_comparisons.length; i++) {
+                        validAnswers.add(list_of_comparisons[i][1]);
+                        rankedAnswers.set(list_of_comparisons[i][1], i);
+                    }
+                }).catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+            }
+
+            window.onload = fetchData;
+
+            function checkAnswer() {
+                const userAnswer = document.getElementById("answerInput").value.trim().toLowerCase();
+
+                if (userAnswer === correctAnswer) {
+                    document.getElementById("resultMessage").textContent = "You won!";
+                } else if (! validAnswers.has(userAnswer)) {
+                    document.getElementById("resultMessage").textContent = "Not possible";
+                } else {
+                    const rankedList = document.getElementById("rankedList");
+                    const listItem = document.createElement("li");
+                    listItem.textContent = userAnswer + " " + rankedAnswers.get(userAnswer);
+                    rankedList.appendChild(listItem);
+                    // reset text box
+                    let textBox = document.getElementById("answerInput");
+                    console.log('textBox', textBox)
+                    textBox.value = "";
+                    document.getElementById("resultMessage").textContent = "";
+                    reorganizeRankedList();
+                }
+            }
+
+            inputBox.addEventListener("keypress", function (event) {
+                const keyPressed = event.key;
+                if (keyPressed === "Enter") {
+                    checkAnswer();
+                }
+            });
+
+            function reorganizeRankedList() {
+                const rankedList = document.getElementById("rankedList");
+                const listItems = Array.from(rankedList.children);
+
+                // Custom sorting function based on rankedAnswers.get(userAnswer)
+                listItems.sort((a, b) => {
+                    const aValue = parseInt(a.textContent.split(' ')[1]);
+                    const bValue = parseInt(b.textContent.split(' ')[1]);
+                    return aValue - bValue;
+                });
+
+                // Clear the rankedList
+                while (rankedList.firstChild) {
+                    rankedList.removeChild(rankedList.firstChild);
+                }
+
+                // Append sorted list items back to the rankedList
+                listItems.forEach((item) => {
+                    rankedList.appendChild(item);
+                });
+            }
+        </script>
+    </body>
+
+</html>
+
